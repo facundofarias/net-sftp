@@ -28,8 +28,8 @@ module Net
     #     sftp.upload! "/local/file.tgz", "/remote/file.tgz"
     #   end
     def self.start(host, user, options={}, &block)
+      version = options.delete(:sftp_version)
       session = Net::SSH.start(host, user, options)
-      version = options.delete(:version)
       sftp = Net::SFTP::Session.new(session, version, &block).connect!
 
       if block_given?
