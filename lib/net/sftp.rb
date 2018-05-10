@@ -29,7 +29,8 @@ module Net
     #   end
     def self.start(host, user, options={}, &block)
       session = Net::SSH.start(host, user, options)
-      sftp = Net::SFTP::Session.new(session, &block).connect!
+      version = options.delete(:version)
+      sftp = Net::SFTP::Session.new(session, version, &block).connect!
 
       if block_given?
         sftp.loop
