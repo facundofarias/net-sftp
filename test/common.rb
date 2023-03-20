@@ -1,5 +1,5 @@
-require 'test/unit'
-require 'mocha/setup'
+require 'minitest/autorun'
+require 'mocha/minitest'
 require 'stringio'
 
 begin
@@ -20,7 +20,7 @@ require 'net/sftp'
 require 'net/sftp/constants'
 require 'net/ssh/test'
 
-class Net::SFTP::TestCase < Test::Unit::TestCase
+class Net::SFTP::TestCase < Minitest::Test
   include Net::SFTP::Constants::PacketTypes
   include Net::SSH::Test
 
@@ -70,7 +70,7 @@ class Net::SFTP::TestCase < Test::Unit::TestCase
 
     def assert_progress_reported_get(offset, data, expect={})
       assert_equal offset, current_event[3] if offset
-      if data.is_a?(Fixnum)
+      if data.is_a?(0.class)
         assert_equal data, current_event[4].length
       elsif data
         assert_equal data, current_event[4]

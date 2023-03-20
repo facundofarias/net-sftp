@@ -27,9 +27,16 @@ module Net
     #   Net::SFTP.start("localhost", "user") do |sftp|
     #     sftp.upload! "/local/file.tgz", "/remote/file.tgz"
     #   end
-    def self.start(host, user, options={}, &block)
-      version = options.delete(:sftp_version)
-      session = Net::SSH.start(host, user, options)
+    #
+    # Extra parameters can be passed:
+    # - The Net::SSH connection options (see Net::SSH for more information)
+    # - The Net::SFTP connection options (only :version is supported, to let you 
+    #   set the SFTP protocol version to be used)
+    def self.start(host, user, ssh_options={}, sftp_options={}, &block)
+      session = Net::SSH.start(host, user, ssh_options)
+      # We only use a single option here, but this leaves room for more later
+      # without breaking the external API.
+      version = sftp_options.fetch(:version, nil)
       sftp = Net::SFTP::Session.new(session, version, &block).connect!
 
       if block_given?
@@ -57,7 +64,7 @@ class Net::SSH::Connection::Session
   # SSH session. Blocks until the SFTP session is fully open, and then
   # returns the SFTP session.
   #
-  #   Net::SSH.start("localhost", "user", "password") do |ssh|
+  #   Net::SSH.start("localhost", "user", :password => "password") do |ssh|
   #     ssh.sftp.upload!("/local/file.tgz", "/remote/file.tgz")
   #     ssh.exec! "cd /some/path && tar xf /remote/file.tgz && rm /remote/file.tgz"
   #   end

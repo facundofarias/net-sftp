@@ -91,6 +91,37 @@ class FileOperationsTest < Net::SFTP::TestCase
     assert @file.eof?
   end
 
+  def test_gets_when_nil_delimiter_should_fread_to_EOF
+    @sftp.expects(:read!).times(2).returns("hello world\ngoodbye world\n\nfarewell!\n", nil)
+    assert_equal "hello world\ngoodbye world\n\nfarewell!\n", @file.gets(nil)
+    assert @file.eof?
+  end
+
+  def test_gets_with_integer_argument_should_read_number_of_bytes
+    @sftp.expects(:read!).returns("hello world\ngoodbye world\n\nfarewell!\n")
+    assert_equal "hello w", @file.gets(7)
+  end
+
+  def test_gets_with_delimiter_and_limit_should_read_to_delimiter_if_less_than_limit
+    @sftp.expects(:read!).returns("hello world\ngoodbye world\n\nfarewell!\n")
+    assert_equal "hello w", @file.gets("w", 11)
+  end
+
+  def test_gets_with_delimiter_and_limit_should_read_to_limit_if_less_than_delimiter
+    @sftp.expects(:read!).returns("hello world\ngoodbye world\n\nfarewell!\n")
+    assert_equal "hello", @file.gets("w", 5)
+  end
+
+  def test_gets_when_no_such_delimiter_exists_in_stream_but_limit_provided_should_read_to_limit
+    @sftp.expects(:read!).returns("hello world\ngoodbye world\n\nfarewell!\n")
+    assert_equal "hello w", @file.gets("z", 7)
+  end
+
+  def test_gets_when_nil_delimiter_and_limit_provided_should_read_to_limit
+    @sftp.expects(:read!).returns("hello world\ngoodbye world\n\nfarewell!\n")
+    assert_equal "hello w", @file.gets(nil, 7)
+  end
+
   def test_gets_at_EOF_should_return_nil
     @sftp.expects(:read!).returns(nil)
     assert_nil @file.gets
@@ -100,6 +131,25 @@ class FileOperationsTest < Net::SFTP::TestCase
   def test_readline_should_raise_exception_on_EOF
     @sftp.expects(:read!).returns(nil)
     assert_raises(EOFError) { @file.readline }
+  end
+
+  def test_rewind_should_reset_to_beginning_of_file
+    @sftp.expects(:read!).times(2).returns("hello world", nil)
+    @file.read
+    assert @file.eof?
+    @file.rewind
+    assert !@file.eof?
+    assert_equal 0, @file.pos
+  end
+
+  def test_rewind
+    @sftp.expects(:write!).with("handle", 0, "hello world\n")
+    @sftp.expects(:read!).with("handle", 12, 8192).returns("hello world\n")
+    @sftp.expects(:read!).with("handle", 0, 8192).returns("hello world\n")
+    @file.puts "hello world\n"
+    assert_equal "hello", @file.read(5)
+    @file.rewind
+    assert_equal "hello world", @file.read(11)
   end
 
   def test_write_should_write_data_and_increment_pos_and_return_data_length
@@ -113,6 +163,12 @@ class FileOperationsTest < Net::SFTP::TestCase
     @file.pos = 15
     assert_equal 11, @file.write("hello world")
     assert_equal 26, @file.pos
+  end
+
+  def test_write_should_write_mutlibyte_string_data_and_increment_pos_and_return_data_length
+    @sftp.expects(:write!).with("handle", 0, "hello world, 你好，世界")
+    assert_equal 28, @file.write("hello world, 你好，世界")
+    assert_equal 28, @file.pos
   end
 
   def test_print_with_no_arguments_should_write_nothing_if_dollar_bslash_is_nil
@@ -155,5 +211,11 @@ class FileOperationsTest < Net::SFTP::TestCase
     stat = stub("stat")
     @sftp.expects(:fstat!).with("handle").returns(stat)
     assert_equal stat, @file.stat
+  end
+
+  def test_size_should_return_size_from_stat
+    stat = stub(size: 1024)
+    @sftp.expects(:fstat!).with("handle").returns(stat)
+    assert_equal 1024, @file.size
   end
 end
